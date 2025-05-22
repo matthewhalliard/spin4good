@@ -83,7 +83,7 @@ function SignupContent() {
     setEmailSent(true);
 
     const { error } = await supabase.auth.signInWithOtp({
-      email,
+      email: email.toLowerCase(),
       options: {
         emailRedirectTo: `${window.location.origin}/auth/callback?redirect=/signup?verified=true`,
       },
