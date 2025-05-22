@@ -1,0 +1,85 @@
+import { NextRequest, NextResponse } from 'next/server';
+import Stripe from 'stripe';
+import { createAdminClient } from '@/lib/supabase/server';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  apiVersion: '2025-04-30.basil',
+});
+
+export async function GET(request: NextRequest) {
+  const searchParams = request.nextUrl.searchParams;
+  const sessionId = searchParams.get('session_id');
+
+  if (!sessionId) {
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/game?error=missing_session`);
+  }
+
+  try {
+    // Retrieve the session from Stripe
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
+
+    if (session.payment_status !== 'paid') {
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/game?error=payment_not_completed`);
+    }
+
+    const userId = session.metadata?.userId;
+    const credits = parseInt(session.metadata?.credits || '0');
+
+    if (!userId || !credits) {
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/game?error=invalid_metadata`);
+    }
+
+    const supabase = await createAdminClient();
+
+    // Check if this payment has already been processed
+    const { data: existingPurchase } = await supabase
+      .from('credit_purchases')
+      .select('*')
+      .eq('stripe_payment_intent_id', session.payment_intent)
+      .single();
+
+    if (existingPurchase) {
+      // Payment already processed, redirect to game
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/game?success=true`);
+    }
+
+    // Update user credits
+    const { data: user } = await supabase
+      .from('users')
+      .select('credits')
+      .eq('id', userId)
+      .single();
+
+    if (!user) {
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/game?error=user_not_found`);
+    }
+
+    const newCredits = user.credits + credits;
+
+    // Update user credits and create purchase record in a transaction
+    const [updateResult, purchaseResult] = await Promise.all([
+      supabase
+        .from('users')
+        .update({ credits: newCredits })
+        .eq('id', userId),
+      supabase
+        .from('credit_purchases')
+        .insert({
+          user_id: userId,
+          stripe_payment_intent_id: session.payment_intent as string,
+          credits_purchased: credits,
+          amount_paid_cents: session.amount_total || 0,
+        })
+    ]);
+
+    if (updateResult.error || purchaseResult.error) {
+      console.error('Error processing payment:', updateResult.error || purchaseResult.error);
+      return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/game?error=processing_error`);
+    }
+
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/game?success=true&credits=${credits}`);
+  } catch (error) {
+    console.error('Stripe success handler error:', error);
+    return NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/game?error=unknown`);
+  }
+} 
