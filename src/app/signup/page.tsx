@@ -223,9 +223,20 @@ function SignupContent() {
             </div>
 
             <div className="mt-6 text-center">
-              <a href="/" className="text-sm text-purple-600 hover:text-purple-700">
+              <button
+                onClick={() => {
+                  // If user is already authenticated, go directly to game or charity selection
+                  if (user) {
+                    router.push('/game');
+                  } else {
+                    // Otherwise, let them enter their email to sign in
+                    setEmailSent(false);
+                  }
+                }}
+                className="text-sm text-purple-600 hover:text-purple-700 font-medium"
+              >
                 Already have an account? Sign in
-              </a>
+              </button>
             </div>
           </div>
         </div>
