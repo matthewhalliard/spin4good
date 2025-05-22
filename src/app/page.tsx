@@ -5,6 +5,9 @@ import { Play, Heart, Shield, Users, TrendingUp, Star, Gift, ArrowRight, Menu, X
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
+// Disable static generation for this page
+export const dynamic = 'force-dynamic';
+
 export default function Home() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [currentPot, setCurrentPot] = useState(0);
