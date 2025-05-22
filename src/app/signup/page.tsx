@@ -1,11 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { Mail, Check, Heart, Gift, ArrowRight, Star, Shield, Loader2 } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function SignupPage() {
+// Force dynamic rendering to avoid build-time issues with useSearchParams
+export const dynamic = 'force-dynamic';
+
+function SignupContent() {
   const [currentStep, setCurrentStep] = useState(1);
   const [email, setEmail] = useState('');
   const [selectedCharity, setSelectedCharity] = useState<any>(null);
@@ -414,4 +417,16 @@ export default function SignupPage() {
   }
 
   return null;
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+        <div className="text-white text-2xl">Loading...</div>
+      </div>
+    }>
+      <SignupContent />
+    </Suspense>
+  );
 } 
