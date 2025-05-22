@@ -1,10 +1,13 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
-export default function ConfirmPage() {
+// Force dynamic rendering to avoid build-time issues with useSearchParams
+export const dynamic = 'force-dynamic';
+
+function ConfirmContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
@@ -46,5 +49,19 @@ export default function ConfirmPage() {
         <div className="mt-4 animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div>
       </div>
     </div>
+  );
+}
+
+export default function ConfirmPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-purple-900 via-blue-900 to-indigo-900 flex items-center justify-center">
+        <div className="text-white text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto"></div>
+        </div>
+      </div>
+    }>
+      <ConfirmContent />
+    </Suspense>
   );
 } 
