@@ -9,31 +9,44 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.exchangeCodeForSession(code)
     
-    if (user) {
-      // Check if user has completed onboarding
-      const { data: profile } = await supabase
-        .from('users')
-        .select('selected_charity_id')
-        .eq('id', user.id)
-        .single()
+    try {
+      const { data, error } = await supabase.auth.exchangeCodeForSession(code)
       
-      // If redirect URL is provided, use it
-      if (redirect) {
-        return NextResponse.redirect(`${origin}${redirect}`)
+      if (error) {
+        // Handle expired or invalid magic link
+        return NextResponse.redirect(`${origin}/signup?error=expired`)
       }
       
-      // If user hasn't selected a charity, send to signup flow
-      if (!profile?.selected_charity_id) {
-        return NextResponse.redirect(`${origin}/signup?verified=true`)
-      }
+      const { user } = data
       
-      // Otherwise, send to game
-      return NextResponse.redirect(`${origin}/game`)
+      if (user) {
+        // Check if user has completed onboarding
+        const { data: profile } = await supabase
+          .from('users')
+          .select('selected_charity_id')
+          .eq('id', user.id)
+          .single()
+        
+        // If redirect URL is provided, use it
+        if (redirect) {
+          return NextResponse.redirect(`${origin}${redirect}`)
+        }
+        
+        // If user hasn't selected a charity, send to signup flow
+        if (!profile?.selected_charity_id) {
+          return NextResponse.redirect(`${origin}/signup?verified=true`)
+        }
+        
+        // Otherwise, send to game
+        return NextResponse.redirect(`${origin}/game`)
+      }
+    } catch (error) {
+      // Handle any other errors
+      return NextResponse.redirect(`${origin}/signup?error=expired`)
     }
   }
 
-  // If no code or user, redirect to home
-  return NextResponse.redirect(origin)
+  // If no code or user, redirect to home with error
+  return NextResponse.redirect(`${origin}/signup?error=invalid`)
 } 

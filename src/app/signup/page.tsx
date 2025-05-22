@@ -31,6 +31,12 @@ function SignupContent() {
       setCurrentStep(2);
       fetchCharities();
     }
+    
+    // Check for errors
+    const error = searchParams.get('error');
+    if (error === 'expired') {
+      alert('Your magic link has expired. Please request a new one.');
+    }
   }, [searchParams]);
 
   const checkUser = async () => {
@@ -176,6 +182,21 @@ function SignupContent() {
                 <h3 className="text-lg font-semibold text-gray-800 mb-2">Check Your Email</h3>
                 <p className="text-gray-600">We've sent a magic link to <strong>{email}</strong></p>
                 <p className="text-sm text-gray-500 mt-2">Click the link to verify your account</p>
+                
+                <div className="mt-6 space-y-3">
+                  <p className="text-xs text-gray-500">
+                    Magic links expire after 1 hour and can only be used once
+                  </p>
+                  <button
+                    onClick={() => {
+                      setEmailSent(false);
+                      setEmail(email); // Keep the email
+                    }}
+                    className="text-purple-600 hover:text-purple-700 text-sm font-medium"
+                  >
+                    ← Back to resend link
+                  </button>
+                </div>
               </div>
             )}
 
